@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/BhoomiGS/DevOps-Lab-Exercises.git', branch: 'main'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('Exercise-8-Jenkins-CI') {
+                    sh 'python3 -m pytest --version'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('Exercise-8-Jenkins-CI') {
+                    sh 'python3 -m pytest test_app.py -v'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI pipeline completed successfully!'
+        }
+        failure {
+            echo 'CI pipeline failed. Check the console output.'
+        }
+    }
+}
