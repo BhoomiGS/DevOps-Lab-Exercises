@@ -1,0 +1,37 @@
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Check Docker') {
+            steps {
+                sh 'docker --version'
+                sh 'docker info --format "{{.ServerVersion}}"'
+            }
+        }
+
+        stage('Build Delivery Image') {
+            steps {
+                sh 'docker build -t zapptto-delivery-monitor .'
+            }
+        }
+
+        stage('Verify Metrics') {
+            steps {
+                sh 'curl -fsS http://host.docker.internal:8000/metrics | grep total_deliveries'
+            }
+        }
+
+        stage('Verify Prometheus') {
+            steps {
+                sh 'curl -fsS http://host.docker.internal:9090/-/healthy'
+            }
+        }
+
+        stage('Verify Grafana') {
+            steps {
+                sh 'curl -fsS http://host.docker.internal:3000/api/health'
+            }
+        }
+    }
+}
