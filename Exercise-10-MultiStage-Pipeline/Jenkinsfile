@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                dir('Exercise-10-MultiStage-Pipeline') {
+                    sh '''
+                    python3 -m venv venv
+                    ./venv/bin/pip install -r requirements.txt
+                    '''
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('Exercise-10-MultiStage-Pipeline') {
+                    sh '''
+                    ./venv/bin/python -m unittest discover -s .
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                dir('Exercise-10-MultiStage-Pipeline') {
+                    sh '''
+                    mkdir -p "${WORKSPACE}/python-app-deploy"
+                    cp app.py "${WORKSPACE}/python-app-deploy/"
+                    cp requirements.txt "${WORKSPACE}/python-app-deploy/"
+                    '''
+                }
+            }
+        }
+
+        stage('Run Application') {
+            steps {
+                sh '''
+                if [ -f "${WORKSPACE}/python-app-deploy/app.pid" ]; then
+                    kill "$(cat "${WORKSPACE}/python-app-deploy/app.pid")" 2>/dev/null || true
+                fi
+                nohup "${WORKSPACE}/Exercise-10-MultiStage-Pipeline/venv/bin/python" \
+                    "${WORKSPACE}/python-app-deploy/app.py" \
+                    > "${WORKSPACE}/python-app-deploy/app.log" 2>&1 &
+                echo $! > "${WORKSPACE}/python-app-deploy/app.pid"
+                '''
+            }
+        }
+
+        stage('Test Application') {
+            steps {
+                sh '''
+                sleep 3
+                grep -q "Running on" "${WORKSPACE}/python-app-deploy/app.log"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Multi-stage pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check Console Output.'
+        }
+    }
+}
